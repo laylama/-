@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b1020">
-<title>找不同 · 手机离线识别工具</title>
+<title>找不同 · 手机离线识别工具 v1.1</title>
 <style>
 :root { color-scheme:dark; --bg:#0b1020;--card:#171f32;--border:#2a354a;--muted:#9aa9c3;--text:#f4f7ff;--blue:#77b9ff;--mint:#6ff1bd;--danger:#ff6370; }
 * { box-sizing:border-box; } html { -webkit-text-size-adjust:100%; } body { margin:0;background:radial-gradient(ellipse at 5% 0%,#182b4d 0,transparent 46%),radial-gradient(ellipse at 95% 40%,#1c254c 0,transparent 40%),var(--bg);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;color:var(--text);line-height:1.55; }
@@ -45,6 +45,7 @@
   <div class="preview" id="preview"><div class="frame"><img id="thumb" alt="上传的游戏截图"><div class="guide top" id="guideTop"></div><div class="guide bot" id="guideBottom"></div></div><small id="previewCaption">绿框是上图，蓝框是下图，可在“截取位置”微调。</small></div>
   <details class="details" id="settings"><summary>⚙️ 识别设置与截取位置</summary><div class="controls">
     <label class="toggle">忽略游戏已经画好的绿色圈<input id="ignoreMarked" type="checkbox" checked></label>
+    <label class="toggle">细节增强：识别柜门花纹、衣饰纹样<input id="fineDetails" type="checkbox" checked></label>
     <div class="control"><div class="head"><span>颜色差异阈值 · 越低越敏感</span><output id="thresholdLabel">35</output></div><input id="threshold" type="range" min="15" max="75" step="5" value="35"><div class="hint">误报多：调大；漏掉细小不同：调小。</div></div>
     <div class="control"><div class="head"><span>最小差异面积</span><output id="areaLabel">145</output></div><input id="minArea" type="range" min="35" max="650" step="5" value="145"><div class="hint">调大可以过滤细碎噪点，但可能漏掉耳环等小差异。</div></div>
     <div class="control"><div class="head"><span>最多圈出</span><output id="maxLabel">25</output></div><input id="maxSpots" type="range" min="5" max="40" step="1" value="25"></div>
@@ -256,7 +257,7 @@
     }
     return dst;
   }
-  function locate(dataA,dataB,w,h,threshold,minArea,ignore,maxSpots){
+  function locate(dataA,dataB,w,h,threshold,minArea,ignore,maxSpots,fineDetails){
     const n=w*h,srcA=gaussianRGB(dataA,w,h),srcB=gaussianRGB(dataB,w,h);
     const green=ignore?createIgnored(dataA,dataB,w,h):{ignored:new Uint8Array(n),count:0};
     const changed=new Uint8Array(n);
@@ -285,6 +286,47 @@
       }
       return !samples||contact/samples<.15;
     });
+    // Second pass for thin, low-contrast patterned differences. The first pass's
+    // 3x3 opening deliberately deletes thin lines; a smaller closing-only pass
+    // preserves them while requiring a compact cluster of many changed pixels.
+    if(fineDetails){
+      const gentle = new Uint8Array(n);
+      const gentleThreshold=Math.max(17,Math.min(27,threshold-12));
+      for(let i=0;i<n;i++){
+        if(green.ignored[i])continue;
+        const p=i*3;
+        if(Math.max(Math.abs(srcA[p]-srcB[p]),Math.abs(srcA[p+1]-srcB[p+1]),Math.abs(srcA[p+2]-srcB[p+2]))>gentleThreshold)gentle[i]=1;
+      }
+      const fineRad=Math.max(2,Math.round(2.6*w/706));
+      const detail=morph(morph(gentle,w,h,fineRad,true),w,h,fineRad,false);
+      const minDetail=Math.max(55*(w/706)**2,minArea*.65);
+      const details=connected(detail,w,h,p=>p.area>=minDetail&&p.w>=11*w/706&&p.h>=12*w/706&&p.w<160*w/706&&p.h<140*w/706);
+      for(const d of details){
+        // Reject detections lying on the existing green rings, or on the
+        // larger candidates already identified by the stronger detector.
+        let covered=0,contact=0,seen=0,signal=0;
+        for(let y=d.y;y<d.y+d.h;y+=2)for(let x=d.x;x<d.x+d.w;x+=2){
+          if(detail[y*w+x]){
+            seen++;
+            if(green.ignored[y*w+x])covered++;
+            if(gentle[y*w+x])signal++;
+            for(let iy=-7;iy<=7;iy+=7){
+              for(let ix=-7;ix<=7;ix+=7){
+                const xx=x+ix,yy=y+iy;
+                if(xx>=0&&xx<w&&yy>=0&&yy<h&&green.ignored[yy*w+xx])contact++;
+              }
+            }
+          }
+        }
+        if(!seen||covered/seen>.02||contact/seen>.20||signal<Math.max(12,26*(w/706)**2))continue;
+        const dcx=d.x+d.w/2,dcy=d.y+d.h/2;
+        const overlaps=filtered.some(p=>{
+          const pcx=p.x+p.w/2,pcy=p.y+p.h/2;
+          return Math.abs(dcx-pcx)<(d.w+p.w)/2+8*w/706&&Math.abs(dcy-pcy)<(d.h+p.h)/2+8*w/706;
+        });
+        if(!overlaps)filtered.push({...d,detail:true});
+      }
+    }
     filtered.sort((a,b)=>b.area-a.area);
     return {candidates:filtered.slice(0,maxSpots),markedCount:green.count};
   }
@@ -323,7 +365,7 @@
       const alignment=findAlignment(imgA,imgB,width,height);
       const alignedB=shiftPixels(imgB,width,height,alignment.dx,alignment.dy);
       const minArea=Number($('minArea').value)*(width/706)**2;
-      const found=locate(imgA,alignedB,width,height,Number($('threshold').value),minArea,$('ignoreMarked').checked,Number($('maxSpots').value));
+      const found=locate(imgA,alignedB,width,height,Number($('threshold').value),minArea,$('ignoreMarked').checked,Number($('maxSpots').value),$('fineDetails').checked);
       let c,ct,scaleX,scaleY,offA,offB;
       if(separate){
         const cWidth=input.naturalWidth,topH=input.naturalHeight,bottomH=Math.round(cWidth*state.img2.naturalHeight/state.img2.naturalWidth),gap=Math.max(4,Math.round(cWidth*.009));
@@ -341,7 +383,7 @@
       $('resultImg').src=state.resultURL;$('download').href=state.resultURL;
       $('resultTitle').textContent='红圈标注 '+found.candidates.length+' 个区域';
       $('runtime').textContent=((performance.now()-start)/1000).toFixed(2)+' 秒';
-      $('resultNote').textContent=(found.markedCount?`已忽略约 ${found.markedCount} 个绿色标记区域。`:'')+'红圈是疑似差异，不保证每处都正确；可以长按结果图保存到照片。';
+      $('resultNote').textContent=(found.markedCount?`已忽略约 ${found.markedCount} 个绿色标记区域。`:'')+'已启用细节增强，可能额外检测到细小花纹。红圈是疑似差异，不保证每处都正确；可长按结果图保存。';
       $('results').classList.add('visible');
       $('results').scrollIntoView({behavior:'smooth',block:'start'});
     }catch(error){console.error(error);showError('识别失败：'+(error.message||'未知错误'));}

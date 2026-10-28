@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<title>找不同 · 手机离线识别工具</title>
+<style>
+:root { color-scheme:dark; --bg:#0b1020;--card:#171f32;--border:#2a354a;--muted:#9aa9c3;--text:#f4f7ff;--blue:#77b9ff;--mint:#6ff1bd;--danger:#ff6370; }
+* { box-sizing:border-box; } html { -webkit-text-size-adjust:100%; } body { margin:0;background:radial-gradient(ellipse at 5% 0%,#182b4d 0,transparent 46%),radial-gradient(ellipse at 95% 40%,#1c254c 0,transparent 40%),var(--bg);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB",sans-serif;color:var(--text);line-height:1.55; }
+.shell { max-width:620px;margin:auto;padding:24px 17px max(40px,env(safe-area-inset-bottom)); }
+.eyebrow {display:inline-flex; align-items:center;gap:6px;border:1px solid #315b59;border-radius:99px;padding:5px 10px;font-size:12px;color:#b0e9d5;background:#17353278;font-weight:600}
+.hero h1 {font-size:clamp(28px,7.3vw,38px);letter-spacing:-.045em;line-height:1.2;margin:16px 0 8px;font-weight:790;}
+.hero h1 span{background:linear-gradient(110deg,#74c7ff,#7df9c7);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.sub{margin:0 0 24px;color:var(--muted);font-size:14px}
+.panel {border:1px solid var(--border);border-radius:20px;background:linear-gradient(145deg,#1b263b,#121b2e);padding:16px;box-shadow:0 12px 36px #04081340;margin-top:15px;}
+.hgroup {display:flex;gap:8px;align-items:center;justify-content:space-between;margin-bottom:12px}.hgroup h2{font-size:16px;margin:0;font-weight:700}.step{font-size:11px;color:var(--mint);letter-spacing:.06em;font-weight:800}
+.mode {display:grid;grid-template-columns:1fr 1fr;gap:6px;border-radius:12px;padding:5px;background:#0b1528;margin:10px 0 16px;}
+.mode button{border:0;padding:11px 5px;border-radius:9px;color:#a1afc8;background:transparent;font:inherit;font-size:13px;font-weight:650;cursor:pointer}.mode button.active{background:#314761;color:#fff;box-shadow:0 2px 6px #0004}
+.upload {display:flex;position:relative;align-items:center;justify-content:center;flex-direction:column;gap:8px;min-height:160px;text-align:center;border:1.5px dashed #54708f;border-radius:15px;background:#152d493b;overflow:hidden;padding:18px;cursor:pointer;}
+.upload:active{transform:scale(.995)}.upload .circle {height:47px;width:47px;border-radius:15px;display:grid;place-items:center;background:#254869;font-size:25px;color:#a8deff}.upload strong{font-size:15px}.upload small{font-size:12px;color:var(--muted)}
+.upload input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;font-size:0}
+.filename{display:none;align-items:center;gap:8px;font-size:12px;color:#b5e5fa;margin-top:12px;word-break:break-all;}
+.separate{display:none;margin-top:12px}.separate.visible{display:block}
+.preview {display:none;margin-top:13px;flex-direction:column;align-items:center;gap:6px}.preview.visible{display:flex}.preview .frame{position:relative;display:inline-block;max-width:100%;overflow:hidden;border-radius:10px;border:1px solid #34445c;line-height:0;background:#070d1c}.preview img{display:block;max-width:100%;max-height:430px;object-fit:contain}.preview .guide {position:absolute;left:0;width:100%;border:2px solid #79eebd;border-radius:3px;background:#70f0b00b;pointer-events:none}.preview .guide.bot{border-color:#75baff;background:#75baff0b}.preview small{color:var(--muted);font-size:11px;text-align:center}
+.action{display:block;width:100%;padding:15px 18px;border:0;border-radius:14px;background:linear-gradient(110deg,#82bfff,#7cf2cf);color:#101f2f;font-weight:800;font-size:16px;cursor:pointer;box-shadow:0 7px 22px #4cbeef23;margin-top:15px}.action:disabled{filter:grayscale(1);opacity:.45;box-shadow:none}.action:active{transform:translateY(1px)}
+.details{margin-top:14px}.details summary{cursor:pointer;list-style:none;font-size:13px;color:#c7d7ec;display:flex;align-items:center;justify-content:space-between;gap:10px;user-select:none}.details summary::-webkit-details-marker{display:none}.details summary:after{content:'⌄';font-size:20px;line-height:1}.details[open] summary:after{transform:rotate(180deg)}
+.controls{border-top:1px solid #344056;margin-top:14px;padding-top:13px}.control{margin:0 0 14px}.control .head{display:flex;align-items:center;justify-content:space-between;font-size:13px;color:#cbd6e9;margin-bottom:6px}.control output{font-weight:700;color:#c5f7df;font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#7cf2cf;margin:0;height:26px;touch-action:pan-y;}.hint{font-size:11px;color:#8c9ab3;line-height:1.5;margin-top:3px}
+.toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-bottom:12px;font-size:13px;color:#d8e6f5}.toggle input{width:21px;height:21px;accent-color:#77eeb8}
+.crop{border:1px solid #2c3c52;padding:12px;border-radius:12px;display:none;margin:10px 0}.crop.visible{display:block}.crop h3{font-size:13px;font-weight:700;margin:0 0 12px}
+.results{display:none}.results.visible{display:block}.status{display:flex;justify-content:space-between;gap:8px;align-items:center;margin:0 0 12px}.pill{border:1px solid #3f6a55;background:#1c3b31;color:#9ef8cc;padding:5px 11px;border-radius:60px;font-size:12px;font-weight:750}.timing{color:var(--muted);font-size:12px}
+.resultImage{width:100%;height:auto;max-height:none;display:block;border-radius:12px;border:1px solid #34445c;background:#060f1c}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:14px}.outlineBtn{padding:12px 8px;border-radius:12px;background:#26364e;border:1px solid #52617b;color:#ecf4ff;font-size:14px;font-weight:720;cursor:pointer;text-align:center;text-decoration:none}.outlineBtn.primary{border-color:#38798e;background:#163f50;color:#b8f2ed}.warn{font-size:12px;color:#e9c595;margin:12px 0 0}.err{font-size:13px;color:#ffa8ac;margin:10px 0 0;display:none}.foot{font-size:12px;color:#8a9bb5;line-height:1.8;margin:22px 4px 0}.foot b{color:#b0d8ea}.dot{height:7px;width:7px;border-radius:50%;background:var(--mint);display:inline-block}.hide{display:none!important}
+@media(min-width:540px) {.shell{padding-top:36px}.panel{padding:22px}.upload{min-height:180px}}
+</style>
+</head>
+<body>
+<main class="shell">
+<header class="hero"><span class="eyebrow"><i class="dot"></i> 纯本地计算 · 不上传图片 · 无需联网</span><h1>找不同，<span>一键圈出来。</span></h1><p class="sub">给游戏截个图，自动对比上下画面。已标记的绿色圈也能跳过。</p></header>
+<section class="panel" aria-label="选择图片">
+  <div class="hgroup"><h2>选择游戏图片</h2><span class="step">01 / 上传</span></div>
+  <div class="mode" role="group" aria-label="图片模式"><button type="button" id="modeShot" class="active" aria-pressed="true">📱 一张游戏截图</button><button type="button" id="modePair" aria-pressed="false">🖼️ 两张图片</button></div>
+  <label class="upload" for="fileOne"><span class="circle">＋</span><strong id="uploadTitle">点这里，从相册选游戏截图</strong><small>支持 JPG、PNG、HEIC（取决于 iOS 版本）</small><input type="file" id="fileOne" accept="image/*"></label>
+  <div class="filename" id="fileInfo">✔ <span id="fileName"></span></div>
+  <div class="separate" id="secondBox"><label class="upload" for="fileTwo" style="min-height:114px"><span class="circle" style="width:36px;height:36px;font-size:20px">＋</span><strong>选择第二张图片</strong><small id="secondName">与第一张画面位置一致</small><input type="file" id="fileTwo" accept="image/*"></label></div>
+  <div class="preview" id="preview"><div class="frame"><img id="thumb" alt="上传的游戏截图"><div class="guide top" id="guideTop"></div><div class="guide bot" id="guideBottom"></div></div><small id="previewCaption">绿框是上图，蓝框是下图，可在“截取位置”微调。</small></div>
+  <details class="details" id="settings"><summary>⚙️ 识别设置与截取位置</summary><div class="controls">
+    <label class="toggle">忽略游戏已经画好的绿色圈<input id="ignoreMarked" type="checkbox" checked></label>
+    <div class="control"><div class="head"><span>颜色差异阈值 · 越低越敏感</span><output id="thresholdLabel">35</output></div><input id="threshold" type="range" min="15" max="75" step="5" value="35"><div class="hint">误报多：调大；漏掉细小不同：调小。</div></div>
+    <div class="control"><div class="head"><span>最小差异面积</span><output id="areaLabel">145</output></div><input id="minArea" type="range" min="35" max="650" step="5" value="145"><div class="hint">调大可以过滤细碎噪点，但可能漏掉耳环等小差异。</div></div>
+    <div class="control"><div class="head"><span>最多圈出</span><output id="maxLabel">25</output></div><input id="maxSpots" type="range" min="5" max="40" step="1" value="25"></div>
+    <div class="toggle"><span>手动调整上下图位置</span><input id="manualCrop" type="checkbox"></div>
+    <div class="crop" id="cropOptions"><h3>滑动调整截图中的两幅画面</h3>
+      <div class="control"><div class="head"><span>上图起点</span><output id="topLabel">27.9%</output></div><input id="topPos" type="range" min="0" max="65" step="0.1" value="27.9"></div>
+      <div class="control"><div class="head"><span>下图起点</span><output id="bottomLabel">58.9%</output></div><input id="bottomPos" type="range" min="25" max="90" step="0.1" value="58.9"></div>
+      <div class="control"><div class="head"><span>每幅图高度</span><output id="heightLabel">30.7%</output></div><input id="sceneHeight" type="range" min="12" max="45" step="0.1" value="30.7"></div>
+      <button id="resetCrop" class="outlineBtn" type="button" style="width:100%">重置为本游戏截图布局</button>
+    </div>
+  </div></details>
+  <button id="run" type="button" class="action" disabled>开始找不同 →</button>
+  <p class="err" id="error" role="alert"></p>
+</section>
+<section class="panel results" id="results" aria-live="polite">
+  <div class="hgroup"><h2>识别结果</h2><span class="step">02 / 圈图</span></div>
+  <div class="status"><span class="pill" id="resultTitle">已圈出差异区域</span><span class="timing" id="runtime"></span></div>
+  <img class="resultImage" id="resultImg" alt="自动用红圈标注出找不同位置的结果图片">
+  <div class="actions"><button class="outlineBtn primary" id="share" type="button">↗ 分享 / 保存到照片</button><a class="outlineBtn" id="download" download="找不同_标注结果.png">↓ 下载 PNG</a></div>
+  <p class="warn" id="resultNote">红圈为算法预测位置，不保证每处都正确。也可以长按上面的图片，选“存储到照片”。</p>
+</section>
+<footer class="foot">适用于上下两幅图<b>位置、缩放基本一致</b>的游戏。当前已预设你发来的宫廷找不同截图布局。两张独立照片也能比较，但如果拍摄角度不同，可能出现大量误报。<br>首次保存本 HTML 后无需网络。iPhone 在“文件”App 中打开时，部分系统会先显示不运行脚本的预览；遇到这种情况，请使用 Safari 打开 HTML 页面。</footer>
+</main>
+<script>
+'use strict';
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = { mode:'shot', img1:null, img2:null, previewURL:null, resultURL:null, blob:null };
+  const delay = () => new Promise(resolve => setTimeout(resolve, 32));
+  const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
+  const LABEL = ['threshold','minArea','maxSpots','topPos','bottomPos','sceneHeight'];
+  const outputFor = {threshold:'thresholdLabel',minArea:'areaLabel',maxSpots:'maxLabel',topPos:'topLabel',bottomPos:'bottomLabel',sceneHeight:'heightLabel'};
+  LABEL.forEach(id => $(id).addEventListener('input',()=>{
+    $(outputFor[id]).textContent = $(id).value + (['topPos','bottomPos','sceneHeight'].includes(id)?'%':'');
+    if(['topPos','bottomPos','sceneHeight'].includes(id)) updateGuides();
+  }));
+  $('manualCrop').addEventListener('change',() => {$('cropOptions').classList.toggle('visible',$('manualCrop').checked);updateGuides();});
+  $('resetCrop').addEventListener('click',()=>{for(const [id,value] of [['topPos','27.9'],['bottomPos','58.9'],['sceneHeight','30.7']]){$(id).value=value; $(id).dispatchEvent(new Event('input'));}});
+  function setMode(mode){
+    state.mode=mode;
+    $('modeShot').classList.toggle('active',mode==='shot'); $('modePair').classList.toggle('active',mode==='pair');
+    $('modeShot').setAttribute('aria-pressed',mode==='shot'); $('modePair').setAttribute('aria-pressed',mode==='pair');
+    $('secondBox').classList.toggle('visible',mode==='pair');
+    $('uploadTitle').textContent=mode==='shot'?'点这里，从相册选游戏截图':'选择第一张图片';
+    $('previewCaption').textContent=mode==='shot'?'绿框是上图，蓝框是下图，可在“截取位置”微调。':'双图模式将整张图片进行对比，请确保两张图尺寸和位置相同。';
+    $('manualCrop').disabled=mode==='pair';
+    $('cropOptions').classList.toggle('visible',mode==='shot'&&$('manualCrop').checked);
+    updateGuides();updateReady();clearResult();
+  }
+  $('modeShot').addEventListener('click',()=>setMode('shot')); $('modePair').addEventListener('click',()=>setMode('pair'));
+  function updateGuides(){
+    const isShot=state.mode==='shot';
+    $('guideTop').style.display=$('guideBottom').style.display=isShot?'block':'none';
+    if(!isShot)return;
+    $('guideTop').style.top=$('topPos').value+'%'; $('guideBottom').style.top=$('bottomPos').value+'%';
+    $('guideTop').style.height=$('guideBottom').style.height=$('sceneHeight').value+'%';
+  }
+  function updateReady(){ $('run').disabled=!(state.img1&&(state.mode==='shot'||state.img2)); }
+  function clearResult(){ $('results').classList.remove('visible');if(state.resultURL){URL.revokeObjectURL(state.resultURL);state.resultURL=null;}state.blob=null; }
+  function showError(message){ $('error').style.display=message?'block':'none';$('error').textContent=message; }
+  async function loadImage(file){
+    if(!file) return null;
+    return new Promise((resolve,reject)=>{
+      const u=URL.createObjectURL(file); const img=new Image();
+      img.onload=()=>{URL.revokeObjectURL(u);resolve(img);};
+      img.onerror=()=>{URL.revokeObjectURL(u);reject(new Error('无法读取这张图片。可以先将它转换为 JPG 或 PNG 再试。'));};
+      img.src=u;
+    });
+  }
+  $('fileOne').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];if(!file)return;showError('');
+    try{
+      const img=await loadImage(file);state.img1=img;
+      $('fileName').textContent=file.name+' · '+img.naturalWidth+' × '+img.naturalHeight; $('fileInfo').style.display='flex';
+      if(state.previewURL)URL.revokeObjectURL(state.previewURL);
+      state.previewURL=URL.createObjectURL(file);$('thumb').src=state.previewURL;
+      $('preview').classList.add('visible');updateGuides();updateReady();clearResult();
+    }catch(err){showError(err.message);}
+  });
+  $('fileTwo').addEventListener('change',async e=>{
+    const file=e.target.files?.[0];if(!file)return;showError('');
+    try{state.img2=await loadImage(file);$('secondName').textContent=file.name;updateReady();clearResult();}
+    catch(err){showError(err.message);}
+  });
+
+  function makeCanvas(w,h){const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;return canvas;}
+  function getPixels(img,x,y,iw,ih,dw,dh){
+    const c=makeCanvas(dw,dh),ct=c.getContext('2d',{willReadFrequently:true});
+    ct.drawImage(img,x,y,iw,ih,0,0,dw,dh);
+    return ct.getImageData(0,0,dw,dh).data;
+  }
+  // 5-pixel separable Gaussian blur, matching the desktop implementation's JPEG-noise filtering.
+  function gaussianRGB(data,w,h){
+    const count=w*h, out=new Uint8Array(count*3), k=[1,4,6,4,1];
+    // Use a compact 16-bit intermediate to preserve the weighted sums.
+    const acc=new Uint16Array(count*3);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      let r=0,g=0,b=0;
+      for(let kx=-2;kx<=2;kx++){
+        const at=(y*w+clamp(x+kx,0,w-1))*4,wt=k[kx+2];
+        r+=data[at]*wt;g+=data[at+1]*wt;b+=data[at+2]*wt;
+      }
+      const q=(y*w+x)*3;acc[q]=r;acc[q+1]=g;acc[q+2]=b;
+    }
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      let r=0,g=0,b=0;
+      for(let ky=-2;ky<=2;ky++){
+        const at=(clamp(y+ky,0,h-1)*w+x)*3,wt=k[ky+2];
+        r+=acc[at]*wt;g+=acc[at+1]*wt;b+=acc[at+2]*wt;
+      }
+      const q=(y*w+x)*3;out[q]=r>>8;out[q+1]=g>>8;out[q+2]=b>>8;
+    }
+    return out;
+  }
+  function connected(mask,w,h,condition){
+    const n=w*h,seen=new Uint8Array(n),q=new Int32Array(n),parts=[];
+    for(let index=0;index<n;index++){
+      if(!mask[index]||seen[index])continue;
+      let head=0,tail=1;q[0]=index;seen[index]=1;
+      let x0=w,y0=h,x1=-1,y1=-1;
+      while(head<tail){
+        const cur=q[head++],x=cur%w,y=(cur/w)|0;
+        if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;
+        for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1);yy++){
+          for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++){
+            const next=yy*w+xx;if(!seen[next]&&mask[next]){seen[next]=1;q[tail++]=next;}
+          }
+        }
+      }
+      const part={x:x0,y:y0,w:x1-x0+1,h:y1-y0+1,area:tail};
+      if(!condition||condition(part))parts.push(part);
+    }
+    return parts;
+  }
+  function findGreenRings(data,w,h){
+    const n=w*h, mask=new Uint8Array(n),scale=w/706;
+    for(let i=0;i<n;i++){
+      const p=4*i,r=data[p],g=data[p+1],b=data[p+2];
+      if(g>165&&g-r>40&&g-b>38)mask[i]=1;
+    }
+    return connected(mask,w,h,p=>{
+      const ww=p.w/scale,hh=p.h/scale,ratio=p.area/(p.w*p.h);
+      return p.area/scale/scale>470&&ww>=48&&ww<=190&&hh>=52&&hh<=230&&ratio>=.11&&ratio<=.33;
+    });
+  }
+  function createIgnored(dataA,dataB,w,h){
+    const a=findGreenRings(dataA,w,h),b=findGreenRings(dataB,w,h),all=a.concat(b),ignored=new Uint8Array(w*h),s=w/706;
+    for(const p of all){
+      const cx=p.x+p.w/2,cy=p.y+p.h/2,rx=p.w/2+17*s,ry=p.h/2+17*s;
+      const x0=Math.max(0,Math.floor(cx-rx)),x1=Math.min(w-1,Math.ceil(cx+rx));
+      const y0=Math.max(0,Math.floor(cy-ry)),y1=Math.min(h-1,Math.ceil(cy+ry));
+      for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+        const dx=(x-cx)/rx,dy=(y-cy)/ry;if(dx*dx+dy*dy<=1)ignored[y*w+x]=1;
+      }
+    }
+    // Estimate unique green-ring locations from both scenes; touching circles may share one component.
+    const unique=[];
+    for(const p of all){const cx=p.x+p.w/2,cy=p.y+p.h/2;
+      if(!unique.some(u=>Math.abs(u.x-cx)<18*s&&Math.abs(u.y-cy)<18*s))unique.push({x:cx,y:cy});
+    }
+    return {ignored,count:unique.length};
+  }
+  // Separable rectangular binary morphology: O(width*height) per stage.
+  function morph(mask,w,h,rad,dilate){
+    const hpass=new Uint8Array(w*h),result=new Uint8Array(w*h),span=2*rad+1;
+    for(let y=0;y<h;y++){
+      const row=y*w;let sum=0;
+      for(let xx=0;xx<=Math.min(rad,w-1);xx++)sum+=mask[row+xx];
+      for(let x=0;x<w;x++){
+        hpass[row+x]=dilate?(sum>0?1:0):(x>=rad&&x+rad<w&&sum===span?1:0);
+        const remove=x-rad;if(remove>=0)sum-=mask[row+remove];
+        const add=x+rad+1;if(add<w)sum+=mask[row+add];
+      }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;for(let yy=0;yy<=Math.min(rad,h-1);yy++)sum+=hpass[yy*w+x];
+      for(let y=0;y<h;y++){
+        result[y*w+x]=dilate?(sum>0?1:0):(y>=rad&&y+rad<h&&sum===span?1:0);
+        const remove=y-rad;if(remove>=0)sum-=hpass[remove*w+x];
+        const add=y+rad+1;if(add<h)sum+=hpass[add*w+x];
+      }
+    }
+    return result;
+  }
+  // Tiny alignment correction prevents one-pixel vertical offsets from becoming dozens of false alarms.
+  function findAlignment(a,b,w,h){
+    const stride=Math.max(3,Math.round(w/141)),edge=12,limit=3;
+    let best={dx:0,dy:0,score:Infinity},atZero=Infinity;
+    for(let dy=-limit;dy<=limit;dy++)for(let dx=-limit;dx<=limit;dx++){
+      let total=0,n=0;
+      for(let y=edge;y<h-edge;y+=stride)for(let x=edge;x<w-edge;x+=stride){
+        const i=(y*w+x)*4,j=((y+dy)*w+x+dx)*4;
+        const d=Math.max(Math.abs(a[i]-b[j]),Math.abs(a[i+1]-b[j+1]),Math.abs(a[i+2]-b[j+2]));
+        total+=Math.min(d,45);n++;
+      }
+      const score=total/n;
+      if(!dx&&!dy)atZero=score;
+      if(score<best.score)best={dx,dy,score};
+    }
+    return atZero-best.score>=.35?best:{dx:0,dy:0,score:atZero};
+  }
+  function shiftPixels(src,w,h,dx,dy){
+    if(dx===0&&dy===0)return src;
+    const dst=new Uint8ClampedArray(src.length);
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){
+      const from=(clamp(y+dy,0,h-1)*w+clamp(x+dx,0,w-1))*4;
+      const to=(y*w+x)*4;
+      dst[to]=src[from];dst[to+1]=src[from+1];dst[to+2]=src[from+2];dst[to+3]=255;
+    }
+    return dst;
+  }
+  function locate(dataA,dataB,w,h,threshold,minArea,ignore,maxSpots){
+    const n=w*h,srcA=gaussianRGB(dataA,w,h),srcB=gaussianRGB(dataB,w,h);
+    const green=ignore?createIgnored(dataA,dataB,w,h):{ignored:new Uint8Array(n),count:0};
+    const changed=new Uint8Array(n);
+    for(let i=0;i<n;i++){
+      if(green.ignored[i])continue;const p=i*3;
+      const dr=Math.abs(srcA[p]-srcB[p]),dg=Math.abs(srcA[p+1]-srcB[p+1]),db=Math.abs(srcA[p+2]-srcB[p+2]);
+      if(Math.max(dr,dg,db)>threshold)changed[i]=1;
+    }
+    let post=morph(changed,w,h,1,false);post=morph(post,w,h,1,true);
+    const rad=Math.max(3,Math.round(6*w/706));
+    post=morph(post,w,h,rad,true);post=morph(post,w,h,rad,false);
+    const parts=connected(post,w,h,p=>p.area>=minArea&&p.w>=8*w/706&&p.h>=8*w/706);
+    // Reject clusters primarily hugging a previously covered green circle.
+    const filtered=parts.filter(p=>{
+      if(!ignore)return true;
+      let contact=0,samples=0;
+      for(let y=p.y;y<p.y+p.h;y+=3)for(let x=p.x;x<p.x+p.w;x+=3){
+        if(post[y*w+x]){
+          samples++;let near=false;
+          for(let dy=-5;dy<=5&&!near;dy+=5)for(let dx=-5;dx<=5;dx+=5){
+            const yy=y+dy,xx=x+dx;
+            if(yy>=0&&yy<h&&xx>=0&&xx<w&&green.ignored[yy*w+xx]){near=true;break;}
+          }
+          if(near)contact++;
+        }
+      }
+      return !samples||contact/samples<.15;
+    });
+    filtered.sort((a,b)=>b.area-a.area);
+    return {candidates:filtered.slice(0,maxSpots),markedCount:green.count};
+  }
+  function circle(ctx,p,scaleX,scaleY,offY){
+    const cx=(p.x+p.w/2)*scaleX,cy=offY+(p.y+p.h/2)*scaleY;
+    const rx=Math.max(20,p.w/2+10)*scaleX,ry=Math.max(20,p.h/2+10)*scaleY;
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+    ctx.lineWidth=Math.max(4,6*scaleX);ctx.strokeStyle='#fff';ctx.stroke();
+    ctx.beginPath();ctx.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+    ctx.lineWidth=Math.max(2.7,3.6*scaleX);ctx.strokeStyle='#ff334f';ctx.stroke();
+  }
+  function getCrop(){
+    const H=state.img1.naturalHeight,W=state.img1.naturalWidth;
+    const t=clamp(Math.round(H*Number($('topPos').value)/100),0,H-1);
+    const b=clamp(Math.round(H*Number($('bottomPos').value)/100),0,H-1);
+    const ch=Math.round(H*Number($('sceneHeight').value)/100);
+    if(Math.abs(t-b)<Math.min(40,H*.03)||t+ch>H||b+ch>H)throw new Error('上下两幅图的截取位置超出了图片范围，请调整位置和高度。');
+    if(t+ch>b)throw new Error('上下两幅画面发生重叠，请调整截取范围。');
+    return {t,b,ch,W,H};
+  }
+  async function analyze(){
+    if(!state.img1||(state.mode==='pair'&&!state.img2))return;
+    const start=performance.now();const originalText=$('run').textContent;
+    $('run').disabled=true;$('run').textContent='正在识别差异…';showError('');clearResult();
+    await delay();
+    try{
+      const input=state.img1, separate=state.mode==='pair';let crop=null;
+      if(!separate)crop=getCrop();
+      const width=Math.min(706,input.naturalWidth),
+        processingHeight=separate?Math.round(width*input.naturalHeight/input.naturalWidth):Math.round(width*crop.ch/crop.W),
+        height=clamp(processingHeight,70,1100);
+      if(!separate&&height!==processingHeight)throw new Error('截图中游戏画面的比例不正确，请调整截取高度。');
+      const imgA=getPixels(input,0,separate?0:crop.t,input.naturalWidth,separate?input.naturalHeight:crop.ch,width,height);
+      const second=separate?state.img2:input;
+      const imgB=getPixels(second,0,separate?0:crop.b,second.naturalWidth,separate?second.naturalHeight:crop.ch,width,height);
+      const alignment=findAlignment(imgA,imgB,width,height);
+      const alignedB=shiftPixels(imgB,width,height,alignment.dx,alignment.dy);
+      const minArea=Number($('minArea').value)*(width/706)**2;
+      const found=locate(imgA,alignedB,width,height,Number($('threshold').value),minArea,$('ignoreMarked').checked,Number($('maxSpots').value));
+      let c,ct,scaleX,scaleY,offA,offB;
+      if(separate){
+        const cWidth=input.naturalWidth,topH=input.naturalHeight,bottomH=Math.round(cWidth*state.img2.naturalHeight/state.img2.naturalWidth),gap=Math.max(4,Math.round(cWidth*.009));
+        c=makeCanvas(cWidth,topH+gap+bottomH);ct=c.getContext('2d');ct.drawImage(input,0,0,cWidth,topH);ct.drawImage(state.img2,0,topH+gap,cWidth,bottomH);
+        ct.fillStyle='#101a2a';ct.fillRect(0,topH,cWidth,gap);
+        scaleX=cWidth/width;scaleY=topH/height;offA=0;offB=topH+gap;
+        for(const p of found.candidates){circle(ct,p,scaleX,scaleY,offA);circle(ct,p,scaleX,bottomH/height,offB+alignment.dy*bottomH/height);}
+      }else{
+        c=makeCanvas(crop.W,crop.H);ct=c.getContext('2d');ct.drawImage(input,0,0);
+        scaleX=crop.W/width;scaleY=crop.ch/height;offA=crop.t;offB=crop.b;
+        for(const p of found.candidates){circle(ct,p,scaleX,scaleY,offA);circle(ct,p,scaleX,scaleY,offB+alignment.dy*scaleY);}
+      }
+      const blob=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(new Error('生成结果失败，图片可能太大。')),'image/png'));
+      state.blob=blob;state.resultURL=URL.createObjectURL(blob);
+      $('resultImg').src=state.resultURL;$('download').href=state.resultURL;
+      $('resultTitle').textContent='红圈标注 '+found.candidates.length+' 个区域';
+      $('runtime').textContent=((performance.now()-start)/1000).toFixed(2)+' 秒';
+      $('resultNote').textContent=(found.markedCount?`已忽略约 ${found.markedCount} 个绿色标记区域。`:'')+'红圈是疑似差异，不保证每处都正确；可以长按结果图保存到照片。';
+      $('results').classList.add('visible');
+      $('results').scrollIntoView({behavior:'smooth',block:'start'});
+    }catch(error){console.error(error);showError('识别失败：'+(error.message||'未知错误'));}
+    finally{$('run').disabled=false;$('run').textContent=originalText;}
+  }
+  $('run').addEventListener('click',analyze);
+  $('share').addEventListener('click',async()=>{
+    if(!state.blob)return;
+    try{
+      const file=new File([state.blob],'找不同_标注结果.png',{type:'image/png'});
+      if(navigator.canShare&&navigator.canShare({files:[file]})&&navigator.share){await navigator.share({files:[file],title:'找不同标注结果'});return;}
+    }catch(e){if(e.name==='AbortError')return;console.warn(e);}
+    $('download').click();
+  });
+  setMode('shot');
+})();
+</script>
+</body>
+</html>
